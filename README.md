@@ -2,42 +2,11 @@
 
 A modern, interactive chess position editor and analysis tool powered by Stockfish WASM and a custom alpha-beta engine. Build custom positions, analyze them with engine suggestions, and explore chess variations with an intuitive drag-and-drop interface.
 
-![Chess Assistant](https://img.shields.io/badge/chess-assistant-blue) ![License](https://img.shields.io/badge/license-MIT-green)
-
-## Features
-
-### 🎯 Dual-Mode Interface
-- **Setup Mode**: Freely position pieces with drag-and-drop controls
-- **Analysis Mode**: Play moves and receive real-time engine suggestions
-
-### 🤖 Powerful Chess Engine
-- **Stockfish 10** integration via WebAssembly for professional-strength analysis
-- **Fallback minimax engine** with alpha-beta pruning for offline use
-- Adjustable thinking time (Fast, Balanced, Strong)
-- Real-time evaluation display with progress indicators
-
-### 📊 Position Management
-- FEN string import/export
-- Copy position to clipboard
-- Persistent state across sessions
-- Quick position reset and clear
-
-### 🎨 Modern UI/UX
-- Dark-themed, responsive design
-- Smooth drag-and-drop piece movement
-- Visual move highlighting (legal moves, captures, last move)
-- Piece inventory with drag-to-board placement
-- Trash zone for easy piece removal
-
-## Demo
-
-Open `index.html` in any modern web browser to start using Chess Assistant. No build process or server required.
-
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ChessAssist.git
+git clone https://github.com/unp4tched/ChessAssist.git
 
 # Navigate to the directory
 cd ChessAssist
@@ -82,26 +51,6 @@ cd ChessAssist
 - Move-time search with depth reporting
 - Automatic fallback on unavailability
 
-### Fallback Engine
-- Alpha-beta negamax search with move ordering
-- Transposition table (200k entries)
-- Quiescence search with delta pruning
-- Killer move and history heuristics
-- MVV-LVA capture ordering
-- Piece-square tables for positional evaluation
-- Endgame detection with separate king tables
-
-## Browser Compatibility
-
-| Browser | Version | Support |
-|---------|---------|---------|
-| Chrome/Edge | 90+ | ✅ Full |
-| Firefox | 88+ | ✅ Full |
-| Safari | 14+ | ✅ Full |
-| Opera | 76+ | ✅ Full |
-
-**Requirements**: WebAssembly support, ES6 features, CSS Grid
-
 ## Project Structure
 
 ```
@@ -125,57 +74,12 @@ ChessAssist/
 └── README.md               # This file
 ```
 
-## Performance
-
-- **Initial Load**: < 2 seconds (including WASM)
-- **Position Setup**: Instant drag-and-drop response
-- **Fast Mode**: 600ms per move
-- **Balanced Mode**: 1200ms per move
-- **Strong Mode**: 2500ms per move
-- **Memory Usage**: ~50-80 MB (including engine)
-
-## Features in Detail
-
-### Position Validation
-- Automatic illegal position detection
-- Game-over state recognition (checkmate, stalemate, draw)
-- Castling rights preservation
-- En passant square tracking
-
-### Move Visualization
-- Orange highlighting for source square
-- Green highlighting for destination square
-- Dot indicators for legal destination squares
-- Ring indicators for capture moves
-
-### Keyboard Shortcuts
-- `Escape`: Deselect pieces and clear palette
-
-## Documentation
-
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Get up and running in 60 seconds
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Deploy to GitHub Pages, Netlify, Vercel, or custom servers
-- **[Contributing Guide](docs/CONTRIBUTING.md)** - How to contribute to the project
-- **[Changelog](docs/CHANGELOG.md)** - Version history and release notes
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](docs/CONTRIBUTING.md) before submitting a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-
-This project is licensed under the MIT License. See below for third-party licenses:
-
-- **chess.js**: BSD-2-Clause
-- **Stockfish**: GPL v3
-- **Cburnett Chess Pieces**: CC-BY-SA 3.0
-- **Tailwind CSS**: MIT
 
 ## Acknowledgments
 
-- [Stockfish Team](https://stockfishchess.org/) for the powerful chess engine
+- [Stockfish Team](https://stockfishchess.org/) for the chess engine
 - [Jeff Hlywa](https://github.com/jhlywa) for chess.js
-- [Cburnett](https://en.wikipedia.org/wiki/User:Cburnett) for the beautiful piece artwork
+- [Cburnett](https://en.wikipedia.org/wiki/User:Cburnett) for the piece artwork
 - Tailwind Labs for the excellent CSS framework
 
 ## Support
@@ -183,5 +87,3 @@ This project is licensed under the MIT License. See below for third-party licens
 For questions, bug reports, or feature requests, please open an issue on GitHub.
 
 ---
-
-**Built with ♟️ by developers, for chess enthusiasts**
