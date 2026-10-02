@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Interactive chess assistant with position setup and Stockfish engine analysis">
+<title>Chess Assistant — Setup &amp; Analysis</title>
+<script src="assets/tailwind.js"></script>
+<script src="assets/chess.min.js"></script>
+<script src="assets/engine.js"></script>
+<script src="app.js" defer></script>
+<style>
+  html { color-scheme: dark; }
+  body { background:#09090b; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#3f3f46; border-radius:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+
+  #board {
+    user-select:none; touch-action:none;
+    grid-template-rows:repeat(8, minmax(0, 1fr));
+  }
+  .tile { position:relative; display:flex; align-items:center; justify-content:center; min-width:0; min-height:0; }
+  .tile-light { background:#EAE5D6; }
+  .tile-dark  { background:#7C8A94; }
+  .tile-sel   { box-shadow: inset 0 0 0 3px rgba(255,255,255,.65); }
+  .tile-legal::after {
+    content:''; position:absolute; width:30%; height:30%; border-radius:9999px;
+    background:rgba(23,23,23,.28); left:50%; top:50%; transform:translate(-50%,-50%);
+  }
+  .tile-capture::after {
+    content:''; position:absolute; inset:6%; border-radius:9999px;
+    border:4px solid rgba(23,23,23,.30);
+  }
+  .tile-drop { box-shadow: inset 0 0 0 3px rgba(255,255,255,.9); }
+  .tile-from { background-image:linear-gradient(rgba(245,158,11,.45), rgba(245,158,11,.45)); }
+  .tile-to   { background-image:linear-gradient(rgba(16,185,129,.45), rgba(16,185,129,.45)); }
+
+  .coord { position:absolute; font-size:10px; font-weight:700; pointer-events:none; }
+  .coord-rank { top:4px; left:5px; }
+  .coord-file { bottom:3px; right:5px; }
+  .tile-light .coord { color:rgba(90,84,66,.85); }
+  .tile-dark  .coord { color:rgba(240,238,230,.75); }
+
+  .piece-img {
+    width:78%; height:78%; object-fit:contain; pointer-events:none;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));
+  }
+  .piece-btn { transition:transform .1s ease; }
+  .piece-btn:hover { transform:scale(1.1); }
+
+  .drag-ghost {
+    position:fixed; z-index:60; width:64px; height:64px; pointer-events:none;
+    transform:translate(-50%,-55%) scale(1.08);
+    filter:drop-shadow(0 10px 14px rgba(0,0,0,.55));
+  }
+  .drag-ghost img { width:100%; height:100%; }
+
+  .seg { transition:all .15s ease; }
+  .trash-hot { border-color:#f59e0b !important; background:rgba(245,158,11,.12) !important; transform:scale(1.06); }
+  .panel { transition:border-color .2s ease; }
+  .panel-attention { border-color:#f59e0b !important; }
+  @keyframes slide { 0% { transform:translateX(-110%);} 100% { transform:translateX(280%);} }
+  .progress-indet { width:40% !important; animation: slide 1.1s ease-in-out infinite; }
+</style>
+</head>
+<body class="min-h-screen text-zinc-200 antialiased">
+
+<div class="max-w-6xl mx-auto px-4 py-7">
+
+  <!-- Header -->
+  <header class="flex flex-col lg:flex-row lg:items-center gap-4 mb-7">
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight text-zinc-50">Chess Assistant</h1>
+      <p class="text-[13px] text-zinc-500">Build a position, then get the engine's best move.</p>
+    </div>
+    <div class="lg:ml-auto flex items-center gap-3">
+      <select id="strengthSel" title="Engine thinking time"
+              class="text-sm font-medium px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-600">
+        <option value="600">Fast</option>
+        <option value="1200" selected>Balanced</option>
+        <option value="2500">Strong</option>
+      </select>
+      <button id="beginBtn"
+              class="px-7 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-200 active:scale-[.98] text-zinc-900 text-sm font-semibold shadow-lg shadow-black/40 transition disabled:opacity-40 disabled:pointer-events-none">
+        Begin
+      </button>
+    </div>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,540px)_minmax(0,1fr)] gap-6 items-start">
+
+    <!-- Board column -->
+    <section>
+      <div id="boardWrap" class="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/50 ring-1 ring-zinc-800">
+        <div id="board" class="grid grid-cols-8 aspect-square w-full"></div>
+        <div id="gameOverBadge" class="hidden absolute inset-x-0 bottom-0 flex justify-center pb-3 pointer-events-none">
+          <div class="bg-zinc-950/90 backdrop-blur text-zinc-100 text-sm font-medium px-5 py-2 rounded-full ring-1 ring-zinc-700"></div>
+        </div>
+      </div>
+
+      <div class="mt-3 flex items-center gap-2">
+        <div class="relative flex-1">
+          <input id="fenInput" spellcheck="false"
+                 class="w-full pl-3 pr-3 py-2 text-[12.5px] font-mono rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 focus:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                 placeholder="FEN">
+        </div>
+        <button id="copyFenBtn" title="Copy FEN"
+                class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 text-sm font-medium">Copy</button>
+        <button id="loadFenBtn" title="Load FEN"
+                class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 text-sm font-medium">Load</button>
+      </div>
+      <p id="fenError" class="hidden text-xs text-red-400 mt-1.5"></p>
+      <p id="modeHint" class="text-xs text-zinc-600 mt-2">Drag pieces to edit · drop on the trash or off the board to remove · press Begin and the engine suggests every move.</p>
+    </section>
+
+    <aside class="flex flex-col gap-4">
+
+      <div class="panel bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-[11px] font-bold uppercase tracking-[.12em] text-zinc-500">Position</h2>
+          <span id="turnPill" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300">White to move</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <p class="text-[11px] font-semibold text-zinc-500 mb-1.5">Side to move</p>
+            <div class="flex bg-zinc-950/60 border border-zinc-800 rounded-xl p-1 text-sm font-medium">
+              <button id="turnWhiteBtn" class="flex-1 py-1.5 rounded-lg">White</button>
+              <button id="turnBlackBtn" class="flex-1 py-1.5 rounded-lg">Black</button>
+            </div>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-zinc-500 mb-1.5">Quick actions</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="resetBtn" class="py-1.5 rounded-xl bg-zinc-800/70 hover:bg-zinc-800 text-zinc-300 text-sm font-medium">Reset</button>
+              <button id="clearBtn" class="py-1.5 rounded-xl bg-zinc-800/70 hover:bg-zinc-800 text-zinc-300 text-sm font-medium">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="inventoryPanel" class="panel bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-[11px] font-bold uppercase tracking-[.12em] text-zinc-500">Piece Inventory</h2>
+          <p class="text-[11px] text-zinc-600">drag onto the board &middot; click to arm</p>
+        </div>
+        <div class="flex items-start gap-4">
+          <div class="flex-1">
+            <div id="invWhite" class="grid grid-cols-6 gap-1.5 mb-2"></div>
+            <div id="invBlack" class="grid grid-cols-6 gap-1.5"></div>
+          </div>
+          <div class="flex flex-col items-center gap-1.5">
+            <div id="trashZone"
+                 class="h-16 w-16 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900 flex items-center justify-center transition-all">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2" stroke-linecap="round">
+                <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              </svg>
+            </div>
+            <p class="text-[10px] text-zinc-600 text-center leading-tight">drop here<br>to remove</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-[11px] font-bold uppercase tracking-[.12em] text-zinc-500">Engine</h2>
+          <span id="engineStatus" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">Loading engine…</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span id="evalBlackLabel" class="text-[11px] font-mono w-12 text-right text-zinc-500">0.00</span>
+          <div class="relative flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div id="evalWhiteBar" class="absolute inset-y-0 left-0 bg-zinc-200 rounded-full" style="width:50%; transition:width .6s ease"></div>
+            <div class="absolute inset-y-0 left-1/2 w-px bg-amber-400/70"></div>
+          </div>
+          <span id="evalWhiteLabel" class="text-[11px] font-mono w-12 text-zinc-500">0.00</span>
+        </div>
+
+        <ul id="moveList" class="mt-3 max-h-52 overflow-y-auto divide-y divide-zinc-800/70"></ul>
+        <p id="emptyListNote" class="text-[13px] text-zinc-600 mt-3">No suggestions yet.</p>
+
+        <div class="mt-3 h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div id="progressBar" class="h-full bg-amber-400/80" style="width:0%"></div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <footer class="text-center text-[11px] text-zinc-700 mt-8">
+    chess.js &middot; Stockfish 10 (wasm/asm) &middot; minimax fallback &middot; pieces by Cburnett (CC-BY-SA)
+  </footer>
+</div>
+
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 bg-zinc-100 text-zinc-900 text-sm font-medium px-4 py-2 rounded-xl shadow-2xl transition-all duration-200 z-50 opacity-0"></div>
+
+</body>
+</html>
